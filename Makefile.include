@@ -1,0 +1,61 @@
+Q = @
+
+MODULES += core/sys
+
+OBJ_DIR = obj_$(TARGET)
+
+oname = ${patsubst %.c, %.o, ${1}}
+
+CONTIKI_OBJFILES = ${addprefix $(OBJ_DIR)/, ${call oname, $(CONTIKI_SOURCEFILES)}}
+
+uniq = ${if $1, $(firstword $1) ${call uniq, ${filter-out $(firstword $1), $1}}}
+
+
+#UNIQUEMODULES = $(call uniq,$(MODULES))
+MODULEDIRS = ${wildcard ${addprefix $(CONTIKI), $(MODULES)}}
+MODULES_SOURCES = ${foreach d, $(MODULEDIRS), ${subst ${d}/,,${wildcard $(d)/*.c}}}
+CONTIKI_SOURCEFILES += $(MODULES_SOURCES)
+
+### include target_makefile ###
+include $(CONTIKI)arch/$(TARGET)/Makefile.$(TARGET)
+#${info #### $(CONTIKI_OBJFILES)}
+CFLAGS += ${addprefix -I, $(CONTIKI)include $(CONTIKI)arch/$(TARGET)}
+
+### C99 compiler ###
+CFLAGS += -std=gnu99
+
+CONTIKIDIRS = ${addprefix $(CONTIKI), core/sys arch/$(TARGET)}
+SOURCEDIRS = . $(CONTIKIDIRS)
+
+$(OBJ_DIR):
+	@mkdir $@
+
+
+vpath %.c $(SOURCEDIRS) 
+
+TRACE_CC = @echo "  CC      "  $<
+
+$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
+	$(TRACE_CC)
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+contiki_$(TARGET).a: $(CONTIKI_OBJFILES)
+	$(Q)$(AR) rcf $@ $^
+
+%.co: %.c
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
+
+%.$(TARGET): %.co  contiki_$(TARGET).a
+	$(LD) ${filter-out %.a, $^} ${filter %.a, $^} -o $@
+
+.PRECIOUS: %.$(TARGET)
+
+clean:
+	$(Q)rm -rf $(OBJ_DIR)
+	$(Q)rm *.a
+	$(Q)rm *.$(TARGET)
+
+%: %.c
+
+%: %.$(TARGET)
+	@

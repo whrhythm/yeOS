@@ -1,0 +1,7 @@
+CONTIKI_SOURCEFILES += contiki-main.c clock.o
+
+CC = gcc
+LD = gcc
+AR = ar
+
+CFLAGS += -Wall -g
